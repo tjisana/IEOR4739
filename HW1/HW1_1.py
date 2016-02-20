@@ -19,7 +19,7 @@ except IOError:
     print ("Cannot open file %s\n" % filename)
     sys.exit("bye")
 
-lines = f.readlines();
+lines = f.readlines()
 f.close()
 
 try:
@@ -51,8 +51,6 @@ for line in lines:
         for j in xrange(len(everything)):
             prices[thisline[0]][j] = everything[j]['Adj_Close']
             if j<len(everything)-1:
-                #temp = math.log10(float(everything[j+1]['Adj_Close'])/float(everything[j]['Adj_Close']))
-                #logreturns[thisline[0]][j] = str(temp)
                 logreturns[thisline[0]][j] = str(math.log10(float(everything[j+1]['Adj_Close'])/float(everything[j]['Adj_Close'])))
 
         outputfile.write(thisline[0] + "," + ','.join(prices[thisline[0]][:]) + '\n')

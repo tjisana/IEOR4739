@@ -6,9 +6,9 @@ import random
 
 if len(sys.argv) != 3:  # the program name and the datafile
   # stop the program and print an error message
-  sys.exit("usage: stats.py outputlogR.csv ResultsFile.csv")
+  sys.exit("usage: stats.py results.csv ResultsFile.csv")
 
-inputlogR = sys.argv[1] #need to change this to 1
+input = sys.argv[1] #need to change this to 1
 ResultsFile= sys.argv[2] #need to change this to 1
 
 def reg_m(y, x):
@@ -29,10 +29,10 @@ def reg0_m(y, x):
 try:
     fout = open(ResultsFile, 'w+') # opens the Results file
 except IOError:
-    print ("Cannot open file %s\n" % filename)
+    print ("Cannot open file %s\n" % ResultsFile)
     sys.exit("bye")
 
-with open(inputlogR, 'r') as f:
+with open(input, 'r') as f:
     lines = f.readlines()
     for i in range(int(len(lines)/10)):
         count=0

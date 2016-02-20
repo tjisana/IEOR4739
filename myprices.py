@@ -18,6 +18,7 @@ except IOError:
     sys.exit("bye")
 
 lines = f.readlines();
+f.close()
 
 count = 1
 prices = {}
@@ -26,19 +27,14 @@ for line in lines:
     if len(line) > 0:
         print (str(count) + " " + thisline[0])
         share = Share(thisline[0])
-        everything = share.get_historical('2015-01-01', '2015-01-31')
+        everything = share.get_historical('2015-01-01', '2015-12-31')
         prices[thisline[0]] = [0 for j in xrange(len(everything))]
         for j in xrange(len(everything)):
-#            print str(j) + " price: " + everything[j]['Adj_Close']
+
             prices[thisline[0]][j] = everything[j]['Adj_Close']
 
-#        print prices[thisline[0]]
+
         count += 1
+print prices['DDD']
 
-        
-    if count == 5:
-        break
 
-print prices['DDD']            
-
-f.close()

@@ -1,0 +1,51 @@
+#!/usr/bin/python
+import sys
+import math
+from yahoo_finance import Share
+from pprint import pprint
+
+
+if len(sys.argv) != 3:  # the program name and the datafile
+  # stop the program and print an error message
+  sys.exit("usage: HW1.py russell_1000_ticker.txt output.csv")
+
+filename = sys.argv[1]
+output = sys.argv[2]
+
+try:
+    f = open(filename, 'r') # opens the input file
+except IOError:
+    print ("Cannot open file %s\n" % filename)
+    sys.exit("bye")
+
+lines = f.readlines()
+f.close()
+
+try:
+    outputfile = open(output, 'w') # opens the output file for Adjusted Close prices
+except IOError:
+    print ("Cannot open file %s\n" % filename)
+    sys.exit("bye")
+
+count = 0
+prices = {} #Adjusted Close price
+
+temp=0
+
+for line in lines: #for each stock name read from "filename"
+    thisline = line.split()
+    if len(line) > 0:
+        print (str(count) + " " + thisline[0])
+	try:
+	    everything = Share(thisline[0]).get_historical('2014-01-27', '2016-01-27')
+	    prices[thisline[0]] = [0 for j in xrange(len(everything))]          
+	    for j in xrange(len(everything)):
+                prices[thisline[0]][j] = everything[j]['Adj_Close']
+	except:
+	    print "Some error"      
+        finally:
+	    outputfile.write(thisline[0] + "," + ','.join(prices[thisline[0]][:]) + '\n')
+        count += 1
+
+outputfile.close()
+
