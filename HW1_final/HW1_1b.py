@@ -1,0 +1,49 @@
+#!/usr/bin/python
+import sys
+import math
+from yahoo_finance import Share
+from pprint import pprint
+
+
+if len(sys.argv) != 3:  # the program name and the datafile
+  # stop the program and print an error message
+  sys.exit("usage: HW1_1b.py output.csv returns.csv")
+
+filename = sys.argv[1]
+output = sys.argv[2]
+
+
+try:
+    f = open(filename, 'r') # opens the input file
+except IOError:
+    print ("Cannot open file %s\n" % filename)
+    sys.exit("bye")
+
+lines = f.readlines()
+f.close()
+
+try:
+    outputfile = open(output, 'w') # opens the output file for Adjusted Close prices
+except IOError:
+    print ("Cannot open file %s\n" % filename)
+    sys.exit("bye")
+
+count = 0
+returns = {} #log returns
+temp=0
+
+for line in lines:
+    thisline = line.split(',')
+    if len(line) > 0:
+        print (str(count) + " " + thisline[0])
+        returns[thisline[0]] = [0 for j in xrange(len(thisline)-1)]            
+        
+        for j in xrange(1,len(thisline)):
+            if j<len(thisline)-1:
+                returns[thisline[0]][j-1] = str(float(thisline[j])/float(thisline[j+1])-1)
+
+	outputfile.write(thisline[0] + "," + ','.join(map(str,returns[thisline[0]][:])) + '\n')
+    count += 1
+
+outputfile.close()
+
