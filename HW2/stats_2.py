@@ -72,7 +72,7 @@ print "finished generating return deviations"
 
 max_rsq =0
 max_rsq_names=[]
-for i in xrange(10):#number of times to perform iteration
+for i in xrange(1000000):#number of times to perform iteration
     stime = time.time()
     rsq=0
     randompicks = random.sample(range(0,len(stocks)-1),10) #method for choosing stocks based on random seleciton
