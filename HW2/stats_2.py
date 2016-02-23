@@ -66,7 +66,7 @@ except IOError:
     sys.exit("bye")
 
 
-endtime = 10800 #3hrs in seconds
+endtime = 7200 #3hrs in seconds
 stocknames,stocks = convertReturns_to_Deviations(returnsFILE,deviationsFILE)
 print "finished generating return deviations"
 
