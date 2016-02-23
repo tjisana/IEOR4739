@@ -1,0 +1,11 @@
+HW2 - Tjisana Kerr - tk2663
+
+Part a of the homework is covered in the file stats_2.py
+Assets returns(returns.csv) is assumed to come from HW1. In my case, I reran HW1 file and was able to get close to all of the stocks in the Russell1000 index. I then cleaned the data leaving me with 954 stocks
+Return deviations are calculated from returns.csv and written to the file RD.csv
+Results of picking the best 10 stocks is placed in results.csv. This file contains the names of the 10 stocks and its associated R^2 value
+
+Part b of the homework is covered in file stats_2b.py
+This file creates the factor models and writes the vectors to their respective files. It creates the files : F.txt,idio.txt,Q.txt,vT.txt
+
+Part c - I couldn't figure this part out.

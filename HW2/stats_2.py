@@ -53,7 +53,7 @@ def convertReturns_to_Deviations(inFILE, outFILE): #function converts returns fr
 #execution starts here
 if len(sys.argv) != 4:  # the program name and the datafile
   # stop the program and print an error message
-  sys.exit("usage: stats.py returns.csv returnDeviations.csv results.csv")
+  sys.exit("usage: stats.py returns.csv RD.csv results.csv")
 
 returnsFILE = sys.argv[1]
 deviationsFILE = sys.argv[2]
@@ -66,14 +66,14 @@ except IOError:
     sys.exit("bye")
 
 
-endtime = 7200 #3hrs in seconds
+endtime = 7200 #2hrs in seconds
 stocknames,stocks = convertReturns_to_Deviations(returnsFILE,deviationsFILE)
 print "finished generating return deviations"
 
 max_rsq =0
 max_rsq_names=[]
+stime = time.time()
 for i in xrange(1000000):#number of times to perform iteration
-    stime = time.time()
     rsq=0
     randompicks = random.sample(range(0,len(stocks)-1),10) #method for choosing stocks based on random seleciton
     select10=[]
