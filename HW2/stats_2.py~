@@ -8,10 +8,11 @@ import time
 
 if len(sys.argv) != 3:  # the program name and the datafile
   # stop the program and print an error message
-  sys.exit("usage: stats.py returns.csv results.csv")
+  sys.exit("usage: stats.py returns.csv returnDeviations.csv results.csv")
 
 returnsFILE = sys.argv[1]
-resultsFILE = sys.argv[2]
+deviationsFILE = sys.argv[2]
+resultsFILE = sys.argv[3]
 
 def reg_m(y, x):
     ones = np.ones(len(x[0]))
@@ -28,12 +29,15 @@ def reg0_m(y, x):
     results = sm.OLS(y, X).fit()
     return results
 
+def convertReturns_to_Deviations:
+    
+
 try:
     fout = open(resultsFILE, 'r') # opens the Results file
-    picked10_name = fout.readline().strip().split(',')[:-1]
+    picked10_names = fout.readline().strip().split(',')[:-1]
     fout.close()    	
 except IOError:
-    print ("Cannot open file %s\n" % ResultsFile)
+    print ("Cannot open file %s\n" % resultsFILE)
     sys.exit("bye")
 
 try:
@@ -52,26 +56,9 @@ for j in xrange(len(lines)): #converts data read from file, into stock names and
     allstocks.append([float(i) if i else 0 for i in lines[j].strip().split(',')[1:]]) #converts comma separated string values into floats. ignores name of index
 
 picked10=[]
-for i in xrange(len(picked10)):
-    picked10.append(allstocks[allstocks_names.index(picked10[i])])
-    for i in xrange(1000000):#number of times to perform iteration
-        rsq=0
-        randompicks = random.sample(range(0,len(lines)-1),10) #method for choosing stocks based on random seleciton
-        #randompicks = 0
-        select10=[]
-        select10_names = []
-        for rnd in xrange(0,len(randompicks)):  #populate list with 10 randomly chosen stocks
-        #for rnd in xrange(1,4):
-            select10.append(allstocks[randompicks[rnd]])
-            select10_names.append(allstocks_names[randompicks[rnd]])
-        for k in xrange(0,len(allstocks)):
-            rsq+= reg0_m(allstocks[k],select10).rsquared
-	if rsq>max_rsq:
-	    max_rsq=rsq		
-            max_rsq_names = select10_names + [max_rsq]
-	if time.time()-stime>endtime:#limit the time of execution
-	    break
- 
-#fout.write(','.join([str(i) for i in max_rsq_names])+'\n')
+for i in xrange(len(picked10_names)):
+    temp = allstocks[allstocks_names.index(picked10_names[i])]
+    print reg0_m(allstocks[allstocks_names.index(picked10_names[i])],allstocks).rsquared
+
 f.close()
 
