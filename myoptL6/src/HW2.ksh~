@@ -1,0 +1,28 @@
+#!/bin/ksh
+
+BASEDIR=/home/tjisana/IEOR4739/myoptL6
+
+
+YEAR=`/bin/date +%Y`
+MONTH=`/bin/date +%m`
+TODAY=`/bin/date +%d`
+HOUR=`/bin/date +%H`
+MINUTE=`/bin/date +%M`
+#HOUR=16
+#MINUTE=20
+echo "$HOUR:$MINUTE"
+
+
+BINDIR=$BASEDIR/bin
+DATADIR=$BASEDIR/data
+
+PROG=myopt
+
+
+if [[ ! -d $BASEDIR ]]
+then
+	echo "$BASEDIR does not exist."
+	exit 1
+fi
+
+	$BINDIR/$PROG $DATADIR/f1.dat
