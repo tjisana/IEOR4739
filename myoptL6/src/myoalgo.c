@@ -15,7 +15,7 @@ int myoprepare(myo *pmyo);
 int myoalgo(myo *pmyo)
 {
   int retcode = 0;
-  int max_its = 1;
+  int max_its = 10;
 
   if((retcode = myoprepare(pmyo))) goto BACK;
 
@@ -189,18 +189,64 @@ int myo_step(myo *pmyo)
       
   }
 
-  /** next, compute step size s (k2) **/
-  //s* = (uT * y(k) - 2 * lambda*(x(k)T * Q * y(k)) ) / (2 * lambda * y(k)T * Q * y(k))
-  //Q = VtFV + D
-  double uTy=0;
-  for (int i = 0; i < pmyo->n; ++i)
-  {
-    uTy+=pmyo->mu[i]*pmyo->y[i];
+  /** next, compute step size s (k2) **/  
+
+  double denominator = 0.0, numerator = 0.0, sum=0,lambda=1;
+
+  /** compute Vy **/
+  for(int i = 0; i < pmyo->f; i++){
+    sum = 0;
+    for(int j = 0; j < pmyo->n; j++){
+      sum += pmyo->V[i*pmyo->n + j]*pmyo->y[j];
+    }
+    pmyo->Vy[i] = sum;
   }
-  double* VtFV = (double *)calloc(pmyo->n*pmyo->n,sizeof(double));  
-  matrixMult(pmyo->VtF,pmyo->n,pmyo->f,pmyo->V,pmyo->f,pmyo->n,VtFV);
+
+  for(int j = 0; j < pmyo->n; j++) {  
+    sum = 0;
+    for(int i = 0; i < pmyo->f; i++){
+      sum += pmyo->VtF[j*pmyo->f + i]*pmyo->Vy[i];
+    }
+    
+    sum += pmyo->sigma2[j] * pmyo->y[j];
+
+    /** multiply by y_j to get the j-th entry of yT * (VTFV y + D y) and add it to a**/
+    denominator += sum * pmyo->y[j];
+  }
+  //a *= 2.0 * lambda;
   
-  free(VtFV);
+  
+  sum = 0.0;
+  for (int j = 0; j < pmyo->n; j++) {
+    sum += pmyo->y[j] * pmyo->gradient[j];
+  }  
+
+
+  pmyo->s = -sum/(denominator * 2 * lambda);
+
+  /** To maintain feasibility we need to constrain s to be in [0, 1]
+    Since G(s) is a parabola facing upwards,
+    we see that if s is outside [0, 1] we only need to take the closest point of [0, 1] ( 0 or 1 ) to s
+    which justifies the following code
+  **/
+  if (pmyo->s > 1.0) {
+    pmyo->s = 1.0;
+  }
+  if (pmyo->s < 0.0) {
+    pmyo->s = 0.0;
+  }
+  /** This second check is however redundant because 
+    b = yT * gradient < 0
+    a = 2lambda yTDy + yTVTFVy = 2 lambda yT Q y > 0
+    so s = -b/a has to be > 0
+  **/
+
+  printf("step size = %g\n", pmyo->s);
+  
+  /** update x **/
+  for(int j = 0; j < pmyo->n; j++){
+    pmyo->x[j] += pmyo->s*pmyo->y[j];
+  }
 
  BACK:
   return retcode;
