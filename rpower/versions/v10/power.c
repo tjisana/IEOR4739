@@ -1,7 +1,9 @@
+#include <pthread.h>
+#include <unistd.h>
 #include "utilities.h"
 #include "power.h"
 
-
+int cheap_rank1perturb(int n, double *scratch, double *matcopy, double *matrix, double scale);
 
 int PWRallocatespace(int n, double **pv, double **pnewvector, double **pmatrix)
 {
@@ -27,19 +29,20 @@ void PWRfreespace(powerbag **ppbag)
   if(pbag == NULL) return;
 
   PWRfree(&pbag->vector);
+  PWRfree(&pbag->matcopy);
 
   free(pbag);
   *ppbag = NULL;
 }
 
 
-void PWRfree(double **pvector)
+void PWRfree(double **ppaddress)
 {
-  double *vector = *pvector;
-  if(vector == NULL) return;
-  printf("freeing vector at %p\n", (void *) vector);
-  free(vector);
-  *pvector = NULL; /** prevents double freeing **/
+  double *paddress = *ppaddress;
+  if(paddress == NULL) return;
+  printf("freeing double array at %p\n", (void *) paddress);
+  free(paddress);
+  *ppaddress = NULL; /** prevents double freeing **/
 }
 
 int PWRreadnload_new(char *filename, int ID, powerbag **ppbag)
@@ -114,7 +117,8 @@ int PWRreadnload(char *filename, int *pn, double **pvector, double **pnewvector,
 
 void PWRpoweriteration(int ID, int k, 
 		    int n, double *vector, double *newvector, double *matrix,
-		       double *peigvalue, double *perror)
+		       double *peigvalue, double *perror,
+		         pthread_mutex_t *poutputmutex)
 {
   double norm2 = 0, mult, error;
   int i, j;
@@ -134,9 +138,11 @@ void PWRpoweriteration(int ID, int k,
 
   PWRcompute_error(n, &error, newvector, vector);
 
-  if(0 == k%10){
+  if(0 == k%1000){
+    pthread_mutex_lock(poutputmutex);
     printf("ID %d at iteration %d, norm is %g, ", ID, k, 1/mult);
     printf("  L1(error) = %.9e\n", error);
+    pthread_mutex_unlock(poutputmutex);
   }
 
   *peigvalue = 1/mult;
@@ -167,30 +173,127 @@ void PWRpoweralg_new(powerbag *pbag)
 {
   int n, ID;
   double *vector, *newvector, *matrix;
-  int k;
+  int k, waitcount, retcode;
   double error, tolerance;
+  char letsgo = 0, interrupting, forcedquit = 0;
 
   ID = pbag->ID;
   n = pbag->n;
+
+  pthread_mutex_lock(pbag->poutputmutex);
+  printf("ID %d starts\n", pbag->ID);
+  pthread_mutex_unlock(pbag->poutputmutex);
+
+
   vector = pbag->vector;
   newvector = pbag->newvector;
   matrix = pbag->matrix;
-  tolerance = .000001/n;
-  if (tolerance < 1e-7) tolerance = 1e-7;
+  tolerance = 1e-20; /** excessive **/
+  /*  if (tolerance < 1e-7) tolerance = 1e-7;*/
 
-  for(k = 0; ; k++){
-    PWRpoweriteration(ID, k, n, vector, newvector, matrix, &pbag->topeigvalue, &error);
-    if(error < tolerance){
-      printf(" ID %d converged to tolerance %g!\n", ID, tolerance); 
-      printf(" ID %d top eigenvalue  %g!\n", ID, pbag->topeigvalue);
+  for(;;){
+    pthread_mutex_lock(pbag->poutputmutex);
+    printf(" ID %d in big loop\n", pbag->ID);
+    pthread_mutex_unlock(pbag->poutputmutex);
 
-      break;
+    letsgo = 0;
+    waitcount = 0;
+    while(letsgo == 0){
+      /** wait until WORK signal **/
+      usleep(10000);
+
+      pthread_mutex_lock(pbag->psynchro);
+      if(pbag->command == WORK){
+	letsgo = 1;
+      }
+      else if(pbag->command == QUIT)
+	letsgo = 2;
+      pthread_mutex_unlock(pbag->psynchro);
+
+      if (letsgo == 2) 
+	goto DONE;
+
+      if(0 == waitcount%20){
+	pthread_mutex_lock(pbag->poutputmutex);
+	printf("ID %d bag %p: wait %d for signal; right now have %d\n", pbag->ID, (void *) pbag, waitcount, pbag->command);
+	pthread_mutex_unlock(pbag->poutputmutex);
+
+      }
+      ++waitcount;
+
     }
+
+    pthread_mutex_lock(pbag->poutputmutex);
+    printf("ID %d: got signal to start working\n", pbag->ID);
+    pthread_mutex_unlock(pbag->poutputmutex);
+
+    /** let's do the perturbation here **/
+    if((retcode = cheap_rank1perturb(n, pbag->scratch, pbag->matcopy, pbag->matrix, 10.0)))
+      goto DONE;
+
+    /** initialize vector to random**/
+    for(k = 0; k < n; k++){ 
+      vector[k] = rand()/((double) RAND_MAX);
+    }
+    
+
+    for(k = 0; ; k++){
+
+      /*      PWRshowvector(n, vector);*/
+      PWRpoweriteration(ID, k, n, vector, newvector, matrix, &pbag->topeigvalue, &error, pbag->poutputmutex);
+      if(error < tolerance){
+	pthread_mutex_lock(pbag->poutputmutex);
+	printf(" ID %d converged to tolerance %g! on job %d at iteration %d\n", ID, tolerance,
+	       pbag->jobnumber, k); 
+	printf(" ID %d top eigenvalue  %g!\n", ID, pbag->topeigvalue);
+	pthread_mutex_unlock(pbag->poutputmutex);
+
+	break;
+      }
+      pbag->itercount = k;  /** well, in this case we don't really need k **/
+      if(0 == k%1000){
+	pthread_mutex_lock(pbag->psynchro);
+
+	interrupting = 0;
+	if(pbag->command == INTERRUPT || pbag->command == QUIT){
+	  pthread_mutex_lock(pbag->poutputmutex);
+	  printf(" ID %d interrupting after %d iterations\n", pbag->ID, k);
+	  pthread_mutex_unlock(pbag->poutputmutex);
+
+	  interrupting = 1;
+	}
+
+	pthread_mutex_unlock(pbag->psynchro);
+
+	if(interrupting)
+	  break; /** takes you outside of for loop **/
+      }
+    }
+
+    /** first, let's check if we have been told to quit **/
+    pthread_mutex_lock(pbag->psynchro);
+    if(pbag->command == QUIT)
+      forcedquit = 1;
+    pthread_mutex_unlock(pbag->psynchro);
+
+    if(forcedquit)
+      break;
+
+    pthread_mutex_lock(pbag->psynchro);
+    pbag->status = DONEWITHWORK;
+    pbag->command = STANDBY;
+    pthread_mutex_unlock(pbag->psynchro);
   }
 
-  pbag->status = WAITING;
-
+ DONE:
+  pthread_mutex_lock(pbag->poutputmutex);
+  printf(" ID %d quitting\n", pbag->ID);
+  pthread_mutex_unlock(pbag->poutputmutex);
+  
 }
+
+
+
 
 void PWRshowvector(int n, double *vector)
 {

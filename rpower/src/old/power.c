@@ -5,20 +5,23 @@
 
 int cheap_rank1perturb(int n, double *scratch, double *matcopy, double *matrix, double scale);
 
-int PWRallocatespace(int n, double **pv, double **pnewvector, double **pmatrix)
+int PWRallocatespace(int n, double **pv, double **pnewvector, double **pmatrix, double **pQprime, double **pW0)
 {
   int retcode = 0;
   double *v = NULL;
 
-  v = (double *) calloc(n + n + n*n, sizeof(double));
+  v = (double *) calloc(n + n + n*n + n*n + n, sizeof(double));
   if(!v){
     retcode = NOMEMORY; goto BACK;
   }
   printf("allocated vector at %p\n", (void *) v);
+
   *pv = v;
   *pnewvector = v + n;
-  *pmatrix = v + 2*n;
-
+  *pmatrix = v + n + n;
+  *pQprime= v + n + n + n*n;
+  *pW0 = v + n + n + n*n + n*n;
+  
  BACK:
   return retcode;
 }
@@ -26,12 +29,13 @@ int PWRallocatespace(int n, double **pv, double **pnewvector, double **pmatrix)
 void PWRfreespace(powerbag **ppbag)
 {
   powerbag *pbag = *ppbag;
-  if(pbag == NULL) return;
-
-  PWRfree(&pbag->vector);
-  PWRfree(&pbag->matcopy);
-
-  free(pbag);
+  if(pbag == NULL) return;  
+  PWRfree(&pbag->vector);  
+  //PWRfree(&pbag->newvector);  
+  //PWRfree(&pbag->matrix);  
+  //PWRfree(&pbag->Qprime);  
+  //PWRfree(&pbag->W0);
+  //free(pbag);
   *ppbag = NULL;
 }
 
@@ -48,10 +52,12 @@ void PWRfree(double **ppaddress)
 int PWRreadnload_new(char *filename, int ID, powerbag **ppbag)
 {
   int code = 0, n;
-  double *vector, *newvector, *matrix;
+  double *vector, *newvector, *matrix, *Qprime, *W0;
   powerbag *pbag = NULL;
+  static int rflag= 0;
 
-  code = PWRreadnload(filename, &n, &vector, &newvector,  &matrix);
+  code = PWRreadnload(filename, &n, &vector, &newvector,  &matrix, &Qprime, &W0);
+  //code = PWRreadnload_v2(filename, &n, &vector, &newvector,  &matrix, &Qprime, &W0,&rflag);
   if(code){
     goto BACK;
   }
@@ -74,7 +80,147 @@ int PWRreadnload_new(char *filename, int ID, powerbag **ppbag)
   return code;
 }
 
-int PWRreadnload(char *filename, int *pn, double **pvector, double **pnewvector, double **pmatrix)
+int PWRread_new(char *filename,int* read_n,double* read_matrix){
+  int retcode=0;
+  //double *rm=NULL;
+  FILE *input = NULL;
+  char buffer[100];
+  input = fopen(filename, "r");
+  if(!input){
+    printf("cannot open file %s\n", filename); retcode = 1; goto BACK;
+  }
+  fscanf(input,"%s", buffer);
+  fscanf(input,"%s", buffer);
+  *read_n = atoi(buffer);
+  //rm =(double*)calloc((*read_n)*(*read_n),sizeof(double));
+  read_matrix =(double*)calloc((*read_n)*(*read_n),sizeof(double));
+  if(!read_matrix){
+    printf("memory not allocated"); retcode = 1; goto BACK;
+  }
+  fscanf(input,"%s", buffer);
+  for(int j = 0; j < (*read_n)*(*read_n); j++){ 
+    fscanf(input,"%s", buffer);
+    //rm[j] = atof(buffer);
+    read_matrix[j] = atof(buffer);
+  }
+  fclose(input);
+
+ BACK:
+  printf("read and loaded data for n = %d with code %d\n", *read_n, retcode);
+  return retcode;
+}
+
+//new function
+int PWRread(char *filename,int* read_n,double** read_matrix){
+  int retcode = 0, n;
+  FILE *input = NULL;
+  char buffer[100];
+  input = fopen(filename, "r");
+  if(!input){
+    printf("cannot open file %s\n", filename); retcode = 1; goto BACK;
+  }
+  fscanf(input,"%s", buffer);
+  fscanf(input,"%s", buffer);
+  n = atoi(buffer);
+  *read_n = n;
+
+  (*read_matrix)=(double *)calloc(n*n,sizeof(double));  
+  if(!read_matrix){
+    printf("cannot allocate read matrix\n"); retcode = NOMEMORY; goto BACK;
+  }
+  fscanf(input,"%s", buffer);
+  for(int j = 0; j < n*n; j++){ 
+    fscanf(input,"%s", buffer);
+    (*read_matrix)[j] = atof(buffer);
+  }
+
+  fclose(input);
+
+ BACK:
+  printf("read and loaded data for n = %d with code %d\n", n, retcode);
+  return retcode;
+}
+
+//new function
+int PWRload(int ID,int* read_n,double* read_matrix, powerbag **ppbag){
+  int retcode=0;
+  //double **pvector, **pnewvector, **pmatrix, **pQprime, **pW0;
+  double *pvector, *pnewvector, *pmatrix, *pQprime, *pW0;
+  powerbag *pbag = NULL;
+  //int n= *read_n;
+  pbag = (powerbag *)calloc(1, sizeof(powerbag));
+  if(!pbag){
+    printf("cannot allocate bag for ID %d\n", ID); retcode = NOMEMORY; goto BACK;
+  }
+  *ppbag = pbag;
+
+  printf("n = %d\n", *read_n);  
+  retcode = PWRallocatespace(*read_n, &pvector, &pnewvector, &pmatrix, &pQprime, &pW0);
+  
+
+  for(int j = 0; j < (*read_n)*(*read_n); j++){    
+    pQprime[j]=pmatrix[j] = read_matrix[j];
+  }
+  
+  /** ignore any vector and generate at random **/  
+  for(int j = 0; j < (*read_n); j++){ 
+    pW0[j]=pvector[j] = rand()/((double) RAND_MAX);
+  }
+
+  pbag->n = *read_n;
+  pbag->ID = ID;
+  pbag->vector = pvector;
+  pbag->newvector = pnewvector;
+  pbag->matrix = pmatrix;
+  pbag->Qprime = pQprime;
+  pbag->W0 = pW0;
+  pbag->status = WAITING;  
+
+ BACK:
+  printf("read and loaded data for n = %d with code %d\n", (*read_n), retcode);
+  return retcode;
+}
+
+int PWRreadnload_v2(char *filename, int *pn, double **pvector, double **pnewvector, double **pmatrix, double **pQprime, double **pW0, int *readflag)
+{
+  int retcode = 0, n, j;
+
+if(readflag==0){
+  FILE *input = NULL;
+  char buffer[100];
+
+  input = fopen(filename, "r");
+  if(!input){
+    printf("cannot open file %s\n", filename); retcode = 1; goto BACK;
+  }
+  fscanf(input,"%s", buffer);
+  fscanf(input,"%s", buffer);
+  n = atoi(buffer);
+  *pn = n;
+  
+  printf("n = %d\n", n);
+  retcode = PWRallocatespace(n, pvector, pnewvector, pmatrix, pQprime, pW0);
+  if(retcode) goto BACK;
+
+
+  fscanf(input,"%s", buffer);
+  for(j = 0; j < n*n; j++){ 
+    fscanf(input,"%s", buffer);
+    (*pmatrix)[j] = atof(buffer);
+  }
+  fclose(input);
+}
+  /** ignore any vector and generate at random **/  
+  for(j = 0; j < n; j++){ 
+    (*pvector)[j] = rand()/((double) RAND_MAX);
+  }  
+
+ BACK:
+  printf("read and loaded data for n = %d with code %d\n", n, retcode);
+  return retcode;
+}
+
+int PWRreadnload(char *filename, int *pn, double **pvector, double **pnewvector, double **pmatrix, double **pQprime, double **pW0)
 {
   int retcode = 0, n, j;
   FILE *input = NULL;
@@ -90,7 +236,7 @@ int PWRreadnload(char *filename, int *pn, double **pvector, double **pnewvector,
   *pn = n;
   
   printf("n = %d\n", n);
-  retcode = PWRallocatespace(n, pvector, pnewvector, pmatrix);
+  retcode = PWRallocatespace(n, pvector, pnewvector, pmatrix, pQprime, pW0);
   if(retcode) goto BACK;
 
 
@@ -175,12 +321,11 @@ void PWRpoweralg_new(powerbag *pbag)
   double *vector, *newvector, *matrix;
   int k, waitcount, retcode;
   double error, tolerance;
-  //double tempsum=0;
   char letsgo = 0, interrupting, forcedquit = 0;
-  
+
   ID = pbag->ID;
   n = pbag->n;
-  
+
   pthread_mutex_lock(pbag->poutputmutex);
   printf("ID %d starts\n", pbag->ID);
   pthread_mutex_unlock(pbag->poutputmutex);
@@ -235,7 +380,8 @@ void PWRpoweralg_new(powerbag *pbag)
     /** initialize vector to random**/
     for(k = 0; k < n; k++){ 
       vector[k] = rand()/((double) RAND_MAX);
-    }   
+    }
+    
 
     for(k = 0; ; k++){
 
@@ -244,7 +390,7 @@ void PWRpoweralg_new(powerbag *pbag)
       if(error < tolerance){
 	pthread_mutex_lock(pbag->poutputmutex);
 	printf(" ID %d converged to tolerance %g! on job %d at iteration %d\n", ID, tolerance,
-	        pbag->jobnumber, k); 
+	       pbag->jobnumber, k); 
 	printf(" ID %d top eigenvalue  %g!\n", ID, pbag->topeigvalue);
 	pthread_mutex_unlock(pbag->poutputmutex);
 
@@ -289,8 +435,11 @@ void PWRpoweralg_new(powerbag *pbag)
   pthread_mutex_lock(pbag->poutputmutex);
   printf(" ID %d quitting\n", pbag->ID);
   pthread_mutex_unlock(pbag->poutputmutex);
-
+  
 }
+
+
+
 
 void PWRshowvector(int n, double *vector)
 {
@@ -302,93 +451,4 @@ void PWRshowvector(int n, double *vector)
   printf("\n");
 }
 
-//new function
-int PWRread(char *filename,int* read_n,double** read_matrix){
-  int retcode = 0, n;
-  FILE *input = NULL;
-  char buffer[100];
-  input = fopen(filename, "r");
-  if(!input){
-    printf("cannot open file %s\n", filename); retcode = 1; goto BACK;
-  }
-  fscanf(input,"%s", buffer);
-  fscanf(input,"%s", buffer);
-  n = atoi(buffer);
-  *read_n = n;
 
-  (*read_matrix)=(double *)calloc(n*n,sizeof(double));
-
-  if(!read_matrix){
-    printf("cannot allocate read matrix\n"); retcode = NOMEMORY; goto BACK;
-  }
-  fscanf(input,"%s", buffer);
-  for(int j = 0; j < n*n; j++){ 
-    fscanf(input,"%s", buffer);
-    (*read_matrix)[j] = atof(buffer);
-  }
-
-  fclose(input);
-
- BACK:
-  printf("READ data for n = %d with code %d\n", n, retcode);
-  return retcode;
-}
-
-//new function
-int PWRload(int ID,int* read_n,double** read_matrix, powerbag **ppbag){
-  int retcode=0;
-  //double **pvector, **pnewvector, **pmatrix, **pQprime, **pW0;
-  double *pvector, *pnewvector, *pmatrix, *pQprime, *pW0;
-  powerbag *pbag = NULL;
-  //int n= *read_n;
-  pbag = (powerbag *)calloc(1, sizeof(powerbag));
-  if(!pbag){
-    printf("cannot allocate bag for ID %d\n", ID); retcode = NOMEMORY; goto BACK;
-  }
-  *ppbag = pbag;
-
-  printf("n = %d\n", *read_n);  
-  retcode = PWRallocatespacev2(*read_n, &pvector, &pnewvector, &pmatrix, &pQprime, &pW0);  
-   
-  for(int j = 0; j < (*read_n)*(*read_n); j++){    
-    pQprime[j]=pmatrix[j] = (*read_matrix)[j];    
-  }
-  
-  /** ignore any vector and generate at random **/  
-  for(int j = 0; j < (*read_n); j++){ 
-    pW0[j]=pvector[j] = rand()/((double) RAND_MAX);
-  }
-  
-  pbag->n = *read_n;
-  pbag->ID = ID;
-  pbag->vector = pvector;
-  pbag->newvector = pnewvector;
-  pbag->matrix = pmatrix;
-  pbag->Qprime = pQprime;
-  pbag->W0 = pW0;
-  pbag->status = WAITING;  
-
- BACK:
-  printf("LOADED data for n = %d with code %d\n", (*read_n), retcode);
-  return retcode;
-}
-
-int PWRallocatespacev2(int n, double **pv, double **pnewvector, double **pmatrix, double **pQprime, double **pW0)
-{
-  int retcode = 0;
-  double *v = NULL;
-
-  v = (double *) calloc(n + n + n*n + n*n + n, sizeof(double));
-  if(!v){
-    retcode = NOMEMORY; goto BACK;
-  }
-  printf("allocated vector at %p\n", (void *) v);
-  *pv = v;
-  *pnewvector = v + n;  
-  *pmatrix = v + 2*n;
-  *pQprime = v + 2*n + n*n;
-  *pW0 = v + 2*n + n*n + n*n;
-
- BACK:
-  return retcode;
-}

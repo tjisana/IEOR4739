@@ -29,6 +29,10 @@ typedef struct powerbag{
   int itercount;
   pthread_mutex_t *psynchro;
   pthread_mutex_t *poutputmutex;
+  //new members
+  double *Qprime;
+  double *W0;
+  int eigvaluecount;
 }powerbag;
 
 void PWRpoweralg_new(powerbag *pbag);
@@ -50,6 +54,11 @@ void PWRpoweralg(int n, double *vector, double *newvector, double *matrix,
 void PWRshowvector(int n, double *vector);
 
 void PWRcompute_error(int n, double *perror, double *newvector, double *vector);
+
+//NEW FUNCTIONS
+int PWRread(char *filename,int* read_n,double** read_matrix);
+int PWRload(int ID,int* read_n,double** read_matrix, powerbag **ppbag);
+int PWRallocatespacev2(int n, double **pv, double **pnewvector, double **pmatrix, double **pQprime, double **pW0);
 #endif
 
 /*class powerunit{

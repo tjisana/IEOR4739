@@ -29,16 +29,31 @@ typedef struct powerbag{
   int itercount;
   pthread_mutex_t *psynchro;
   pthread_mutex_t *poutputmutex;
+  double *Qprime;
+  double *W0;
+
 }powerbag;
 
 void PWRpoweralg_new(powerbag *pbag);
 void PWRfreespace(powerbag **ppbag);
 void PWRfree(double **pvector);
 int PWRreadnload_new(char *filename, int ID, powerbag **ppbag);
+int PWRreadnload(char *filename, int *pn, double **pvector, double **pnewvector, double **pmatrix, double **pQprime, double **pW0);
 
-int PWRallocatespace(int n, double **pvector, double **pnewvector, double **pmatrix);
-int PWRreadnload(char *filename, int *pn, double **pvector, double **pnewvector, double **pmatrix);
 
+//newfunction - function was abandoned
+int PWRread_old(char *filename,int* read_n,double* read_matrix);
+//newfunction - function was abandoned
+int PWRload(int ID,int* read_n,double* read_matrix, powerbag **ppbag);
+//newfunction - function was abandoned
+int PWRreadnload(char *filename, int *pn, double **pvector, double **pnewvector, double **pmatrix, double **pQprime, double **pW0);
+
+//new function
+int PWRread(char *filename,int* read_n,double** read_matrix);
+
+int PWRreadnload_v2(char *filename, int *pn, double **pvector, double **pnewvector, double **pmatrix, double **pQprime, double **pW0, int *readflag);
+
+int PWRallocatespace(int n, double **pv, double **pnewvector, double **pmatrix, double **pQprime, double **pW0);
 void PWRpoweriteration(int ID, int k, 
 		    int n, double *vector, double *newvector, double *matrix,
 		       double *peigvalue, double *perror,

@@ -24,19 +24,17 @@ int main(int argc, char *argv[])
   int code = 0, i, j, n, initialruns, scheduledjobs;
   powerbag **ppbag = NULL, *pbag;
   double *matcopy = NULL, *scratch = NULL;
+  int read_n;
+  double *read_matrix;  
+  
+
   double scale = 1.0;
   int quantity = 1, numworkers = 1, theworker; 
-  int eigvaluecount =1;
   char gotone;
-  double tempsum;
 
   pthread_t *pthethread1;
   pthread_mutex_t output;
   pthread_mutex_t *psynchro_array;
-
-  //new variables
-  int read_n;
-  double* read_matrix;
 
   if(argc < 2){ 
     printf(" usage: rpower filename [-s scale] [-q quantity]\n");
@@ -44,6 +42,8 @@ int main(int argc, char *argv[])
   }
 
   sigset(SIGINT, &handlesigint);
+
+
 
   for(j = 2; j < argc; j++){
     if (0 == strcmp(argv[j],"-s")){
@@ -58,17 +58,13 @@ int main(int argc, char *argv[])
       j += 1;
       numworkers = atoi(argv[j]);
     }
-    else if (0 == strcmp(argv[j],"-e")){
-      j += 1;
-      eigvaluecount = atoi(argv[j]);
-    }
     else{
       printf("bad option %s\n", argv[j]); code = 1; goto BACK;
     }
   }
 
-  printf("will use scale %g and quantity %d: %d workers to find %d eigenvalues\n", scale, quantity,
-	 numworkers,eigvaluecount);
+  printf("will use scale %g and quantity %d: %d workers\n", scale, quantity,
+	 numworkers);
 
   if( numworkers > quantity ){
     numworkers = quantity; printf(" --> reset workers to %d\n", numworkers);
@@ -76,8 +72,6 @@ int main(int argc, char *argv[])
 
   deadstatus = (char *) calloc(numworkers, sizeof(char));
 
-  for (int eig = 0; eig <eigvaluecount; ++eig)
-  {
   pthread_mutex_init(&output, NULL); /** common to everybody **/
 
 
@@ -101,21 +95,13 @@ int main(int argc, char *argv[])
     printf("could not create thread array\n"); code = NOMEMORY; goto BACK;
   }
 
-  code = PWRread(argv[1],&read_n,&read_matrix);   
-
-
-  //for loop for number of eigenvalues
-  for (int eig = 0; eig < eigvaluecount; ++eig)
-  {
-  printf("***********************************************************************\n");    
-  printf("                           EIGENVALUE %d                               \n",eig+1);
-  printf("***********************************************************************\n");  
+  code = PWRread(argv[1],&read_n,&read_matrix);
+  
   for(j = 0; j < numworkers; j++){
-    //if((code = PWRreadnload_new(argv[1], 0, ppbag + j)))
-    /*  goto BACK;*/  /** inefficient: we should read the data once, and then
-		      copy **/        
-    if(eig==0) code = PWRload(j,&read_n,&read_matrix,ppbag + j);
-
+    code = PWRload(0,&read_n,read_matrix, ppbag + j);           
+    /*if((code = PWRreadnload_new(argv[1], 0, ppbag + j)))
+      goto BACK;*/  /** inefficient: we should read the data once, and then
+		      copy **/
     pbag = ppbag[j];
     pbag->psynchro = &psynchro_array[j];
     pbag->poutputmutex = &output;
@@ -165,7 +151,7 @@ int main(int argc, char *argv[])
 
   }
   scheduledjobs = activeworkers = initialruns;
-  scheduledjobs =activeworkers * eigvaluecount;
+
   while(activeworkers > 0){
     /** check the workers' status **/
     gotone = 0;
@@ -177,7 +163,7 @@ int main(int argc, char *argv[])
 
 	pthread_mutex_lock(&output);
 	printf("master:  worker %d is done with job %d\n", pbag->ID, pbag->jobnumber);
-	printf(" eigenvalue estimate (%d): %.12e\n",eig,pbag->topeigvalue);
+	printf(" top eigenvalue estimate: %.12e\n", pbag->topeigvalue);
 	pthread_mutex_unlock(&output);
 
 	if(scheduledjobs >= quantity){
@@ -239,25 +225,6 @@ int main(int argc, char *argv[])
       pbag->status = WORKING;
       pbag->itercount = 0;
       pbag->jobnumber = scheduledjobs;
-      tempsum=0;
-    if (eig>0)
-    {    
-    //Q'
-    for(int cnt1 = 0; cnt1 < n; cnt1++)
-      for(int cnt2 = 0; cnt2 < n; cnt2++){
-        pbag->matrix[cnt1*n + cnt2]+= - pbag->topeigvalue * pbag->vector[cnt1]*pbag->vector[cnt2];
-        //first part of w'(0). Set vector to w(0)
-        pbag->newvector[cnt2]=pbag->vector[cnt2];
-      }
-    //w'(0)
-      for(int cnt2 = 0; cnt2 < n; cnt2++)
-          tempsum+=pbag->newvector[cnt2] * pbag->W0[cnt2];
-
-      for(int cnt2 = 0; cnt2 < n; cnt2++)
-       pbag->vector[cnt2] =  pbag->W0[cnt2] - tempsum * pbag->newvector[cnt2];
-    }
-  
-
       pthread_mutex_unlock(&psynchro_array[theworker]);
 
       ++scheduledjobs;
@@ -281,21 +248,15 @@ int main(int argc, char *argv[])
     pthread_mutex_lock(&output);
     printf("master: joined with thread %d\n", j);
     pthread_mutex_unlock(&output);
-    //pbag = ppbag[j];
-    //PWRfreespace(&pbag);
+    pbag = ppbag[j];
+    PWRfreespace(&pbag);
   }
-  //free(ppbag);
-}	 
+  free(ppbag);
+	 
 BACK:
   if(matcopy) free(matcopy);
   if(scratch) free(scratch);
   return code;
-}
-for(j = 0; j < numworkers; j++){
-  pbag = ppbag[j];
-  PWRfreespace(&pbag);
-}
-free(ppbag);  
 }
 
 

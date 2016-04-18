@@ -7,7 +7,7 @@ gccdeb= gcc -ggdb -Wall -pedantic
 CCC = $(gccdeb)
 
 
-GRB = /opt/gurobi/gurobi650/linux64
+GRB = /home/Downloads/gurobi651/linux64
 
 #include
 LPINCDIR = $(GRB)/include

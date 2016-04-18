@@ -6,8 +6,7 @@ from logging import Logger
 from gurobipy import *
 
 def datareader(log, dataname):
-  #log.jointoutput("reading datafile " + dataname + "\n")
-  logging.jointoutput("reading datafile " + dataname + "\n")
+  log.jointoutput("reading datafile " + dataname + "\n")
   N = 0
   M = 0
   try:
