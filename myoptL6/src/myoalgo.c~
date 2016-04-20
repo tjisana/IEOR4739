@@ -213,7 +213,9 @@ int myo_step(myo *pmyo)
     /** multiply by y_j to get the j-th entry of yT * (VTFV y + D y) and add it to a**/
     denominator += sum * pmyo->y[j];
   }
-
+  //a *= 2.0 * lambda;
+  
+  
   sum = 0.0;
   for (int j = 0; j < pmyo->n; j++) {
     sum += pmyo->y[j] * pmyo->gradient[j];
@@ -223,6 +225,9 @@ int myo_step(myo *pmyo)
   pmyo->s = -sum/(denominator * 2 * lambda);
 
   /** To maintain feasibility we need to constrain s to be in [0, 1]
+    Since G(s) is a parabola facing upwards,
+    we see that if s is outside [0, 1] we only need to take the closest point of [0, 1] ( 0 or 1 ) to s
+    which justifies the following code
   **/
   if (pmyo->s > 1.0) {
     pmyo->s = 1.0;
@@ -230,6 +235,11 @@ int myo_step(myo *pmyo)
   if (pmyo->s < 0.0) {
     pmyo->s = 0.0;
   }
+  /** This second check is however redundant because 
+    b = yT * gradient < 0
+    a = 2lambda yTDy + yTVTFVy = 2 lambda yT Q y > 0
+    so s = -b/a has to be > 0
+  **/
 
   printf("step size = %g\n", pmyo->s);
   
