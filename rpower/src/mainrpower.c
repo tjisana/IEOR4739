@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
   double* read_matrix;
 
   if(argc < 2){ 
-    printf(" usage: rpower filename [-s scale] [-q quantity]\n");
+    printf(" usage: rpower filename [-s scale] [-q quantity] [-w num of workers] [-e num of eigenvalues]\n");
     code = 1; goto BACK;
   }
 
