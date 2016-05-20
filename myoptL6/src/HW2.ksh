@@ -27,4 +27,4 @@ fi
 
 	make clean
         make
-	$BINDIR/$PROG $DATADIR/f1.dat
+	$BINDIR/$PROG $DATADIR/myoinput.txt
