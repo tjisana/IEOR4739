@@ -1,0 +1,10 @@
+starting log: Fri May 20 11:57:00 2016
+running on: SB
+
+reading configuration file conf.dat
+n = 8 gamma = 0.2 Gamma = 0.4
+ portfolio at nonrobx.dat nominal returns at nom.dat
+reading x file nonrobx.dat
+ sum of x values = 1.0
+reading mu file nom.dat
+now formulating
