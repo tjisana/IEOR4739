@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
   pthread_mutex_t output;
   pthread_mutex_t *psynchro_array;
 
-  if(argc < 2){ 
+  if(argc < 5){ 
     printf(" usage: rpower filename [-s scale] [-q quantity] [-w workers] [-e eigenvalue]\n");
     code = 1; goto BACK;
   }
