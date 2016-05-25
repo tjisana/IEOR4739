@@ -21,7 +21,7 @@ void handlesigint(int i);
 
 int main(int argc, char *argv[])
 {
-  int code = 0, i, j, n, initialruns, scheduledjobs,eig=0;
+  int code = 0, i, j, n, initialruns, scheduledjobs;
   powerbag **ppbag = NULL, *pbag;
   double *matcopy = NULL, *scratch = NULL;
   double scale = 1.0;
@@ -32,8 +32,8 @@ int main(int argc, char *argv[])
   pthread_mutex_t output;
   pthread_mutex_t *psynchro_array;
 
-  //new variables
-  int read_n;
+//new variables
+  int read_n,eig=2;
   double* read_matrix;
 
   if(argc < 2){ 
@@ -43,9 +43,7 @@ int main(int argc, char *argv[])
 
   sigset(SIGINT, &handlesigint);
 
-
-
-  for(j = 2; j < argc; j++){
+for(j = 2; j < argc; j++){
     if (0 == strcmp(argv[j],"-s")){
       j += 1;
       scale = atof(argv[j]);
@@ -99,37 +97,36 @@ int main(int argc, char *argv[])
     printf("could not create thread array\n"); code = NOMEMORY; goto BACK;
   }
 
-  //read code once
+//read code once
   if(code=PWRread(argv[1],&read_n,&read_matrix)) goto BACK;
 
   for(j = 0; j < numworkers; j++){
     //if((code = PWRreadnload_new(argv[1], 0, ppbag + j)))
-    //  goto BACK;  
-      /** inefficient: we should read the data once, and then
+    if((code = PWRallocateNload(read_n,j,read_matrix, ppbag + j,eig)))
+      goto BACK;  /** inefficient: we should read the data once, and then
 		      copy **/
-    PWRallocateNload(read_n,j,read_matrix, ppbag + j,eig);
     pbag = ppbag[j];
     pbag->psynchro = &psynchro_array[j];
+
     pbag->poutputmutex = &output;
     pbag->command = STANDBY;
     pbag->status = PREANYTHING;
-    //pbag->ID = j;
+    pbag->ID = j;
 
     n = pbag->n;
 
   /** now, allocate an extra matrix and a vector to use in 
       perturbation**/
     /** should really do it in the power code since we are putting them in
-	the bag **/
-    /*pbag->matcopy = (double *)calloc(n*n, sizeof(double));
-    pbag->scratch = (double *)calloc(n, sizeof(double));
-    if((!pbag->matcopy) || (!pbag->scratch)){
-      printf("no memory for matrices at %d\n", j); code = NOMEMORY; goto BACK;
-    }*/
+  the bag **/
+    //pbag->matcopy = (double *)calloc(n*n, sizeof(double));
+    //pbag->scratch = (double *)calloc(n, sizeof(double));
+    //if((!pbag->matcopy) || (!pbag->scratch)){
+    //  printf("no memory for matrices at %d\n", j); code = NOMEMORY; goto BACK;
+    //}
   /** and copy matrix **/
     for(i = 0; i < n*n; i++)
       pbag->matcopy[i] = pbag->matrix[i];
-
     printf("about to launch thread for worker %d\n", j);
 
     pthread_create(&pthethread1[j], NULL, &PWR_wrapper, (void *) pbag);

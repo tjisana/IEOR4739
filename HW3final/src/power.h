@@ -16,14 +16,17 @@
 
 typedef struct powerbag{
   int n;
+  double *W0;
   double *vector;
   double *newvector;
   double *matrix;
   double *matcopy;
   double *scratch;
   double *vectorEigvalue;
+  double *eigvector;
   double topeigvalue;
   int eigcnt;
+
   int ID;
   int status;
   int command;
@@ -50,6 +53,7 @@ void PWRpoweralg(int n, double *vector, double *newvector, double *matrix,
 		 double *peigvalue);
 
 void PWRshowvector(int n, double *vector);
+
 void PWRcompute_error(int n, double *perror, double *newvector, double *vector);
 
 //new function
