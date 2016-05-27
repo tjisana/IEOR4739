@@ -1,0 +1,4 @@
+N 6
+T 4
+IM squareroot
+PD squareinverse
