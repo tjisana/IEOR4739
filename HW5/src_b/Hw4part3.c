@@ -8,6 +8,11 @@
 
 
 int main(int argc,char** argv){
+
+  if(argc < 3){ 
+    printf(" usage: HW4part3 positions.txt prices.txt\n");
+    return 1; 
+  }
   int retcode=0;
   int nAssets; //number of assets
   int T; //number of timeperiods  
