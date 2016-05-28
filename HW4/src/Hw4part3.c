@@ -16,16 +16,23 @@ int main(int argc,char** argv){
   int *pAllocated = NULL;  
   
   //int nRuns = 1000000; //number of simulations
-  int nRuns = 10; //number of simulations
+  //int nRuns = 10; //number of simulations
   double budget = 1e10; //B
   
   double *prices = NULL;  
   double *deltas = NULL;
   double *sigmas = NULL;
   double *quantities = NULL;
+    
+   if(argc < 2){ 
+    printf(" usage: HW4part3.out myoalgoOUTPUT.txt prices.txt numberOFruns\n");
+    return 0;
+  }
+
+  int nRuns = atoi(argv[3]); //number of simulations
   double *PFvalues= (double*)calloc(nRuns, sizeof(double));
   double *PFreturns = (double*)calloc(nRuns, sizeof(double));
-  
+
   //get positions from file 
   if( (retcode = getpositions(argv[1],&nAssets, &pPositions, &pAllocated,0)) != 0)
     return retcode;  

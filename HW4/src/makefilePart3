@@ -1,6 +1,6 @@
 CC = gcc
 LD = gcc
-FLAGS =-g -ggdb -Wall -pedantic -O
+FLAGS =-g -ggdb -Wall -pedantic -std=c99 -O
 LIBS = -ldl -lm -lpthread
 BIN = ../bin
 
