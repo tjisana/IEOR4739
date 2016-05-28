@@ -23,8 +23,8 @@ int main(int argc, char* argv[])
   char N[2],T[2];
   char im[50],pd[50];
   
-  if(argc < 2){
-    printf("\nUsage: master portnumber\n");
+  if(argc < 3){
+    printf("\nUsage: master portnumber filename\n");
     return 0;
   }
 

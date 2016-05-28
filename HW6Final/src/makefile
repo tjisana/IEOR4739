@@ -1,22 +1,26 @@
-CC = gcc
-LD = gcc
-FLAGS =-g -ggdb -Wall -pedantic -std=c99 -O
-LIBS = -ldl -lm -lpthread
-BIN = ../bin
+gccopt= gcc -O2 -funroll-loops
+gccdeb= gcc -ggdb -Wall
 
-PROG_OBJS = HW6.c
+CC= $(gccdeb)
+CFLAGS=
+LIBS= -lpthread -lm
 
-TGTS = HW6
+../bin/%.o: %.c
+	@echo compiling $*.c with $(CC)
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-$(TGTS):$(PROG_OBJS)
-	$(CC) $(FLAGS) $(PROG_OBJS) $(LIBS) -o $(BIN)/$(TGTS)
- 
-.SUFFIXES:.cpp
- 
-.cpp.o:
-	$(CC) $(CFLAGS) $<
+MASTER = ../bin/master.o ../bin/gsock.o
+master: $(MASTER) 
+	$(CC) $(CFLAGS) -o ../bin/master $(MASTER) $(LIBS)
+	@echo 
+
+WORKER = ../bin/worker.o 
+worker: $(WORKER) 
+	$(CC) $(CFLAGS) -o ../bin/worker $(WORKER) $(LIBS)
+	@echo 
 
 clean:
-	rm -f $(BIN)/$(TGTS)
-	rm -f $(BIN)/*.o
-	
+	rm ../bin/*
+cleanse:
+	rm *~
+	rm *#
